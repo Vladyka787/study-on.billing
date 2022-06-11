@@ -31,6 +31,7 @@ services:
       - ${HOME}/.composer:/.composer
     environment:
       - COMPOSER_ALLOW_SUPERUSER=1
+      - PHP_IDE_CONFIG=serverName=Docker
     links:
       - postgres
   node:
