@@ -27,6 +27,7 @@ class AppFixtures extends Fixture
         $userOne->setPassword($hash);
 
         $userOne->setRoles(['ROLE_USER']);
+        $userOne->setBalance(5005.2);
 
 
         $userTwo = new User();
@@ -36,6 +37,7 @@ class AppFixtures extends Fixture
         $userTwo->setPassword($hash);
 
         $userTwo->setRoles(['ROLE_SUPER_ADMIN']);
+        $userTwo->setBalance(22896.3);
 
         $manager->persist($userOne);
         $manager->persist($userTwo);
