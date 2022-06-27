@@ -4,8 +4,11 @@ namespace App\Controller;
 
 use App\DTO\UserDto;
 use App\Repository\UserRepository;
+use Exception;
 use JMS\Serializer\SerializerBuilder;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
+use Nelmio\ApiDocBundle\Annotation\Security;
+use OpenApi\Annotations as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,11 +21,29 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTEncodeFailureException;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Form\Exception\RuntimeException;
+use Nelmio\ApiDocBundle\Annotation\Model;
 
 class ApiController extends AbstractController
 {
     /**
      * @Route("/api/v1/register", name="app_api_v1_register", methods={"POST"})
+     *
+     * @OA\Post(
+     *     description="Добавить нового пользователя и получить JWT токен",
+     *     tags={"register"},
+     *     @OA\RequestBody(
+     *          @Model(type=UserDto::class)
+     *     ),
+     *     @OA\Response(
+     *          response=201,
+     *          description="JWT токен",
+     *          @OA\JsonContent(
+     *              type="object",
+     *              @OA\Property(property="token", type="string"),
+     *          )
+     *     )
+     * )
      */
     public function register(
         Request                  $request,
@@ -77,6 +98,29 @@ class ApiController extends AbstractController
     /**
      * @Route("/api/v1/users/current", name="api_v1_users_current", methods={"GET"})
      * @throws JWTDecodeFailureException
+     *
+     * @OA\Get(
+     *     description="Получить пользователя по JWT токену",
+     *     tags={"user"},
+     *     )
+     *     @OA\Response(
+     *          response=200,
+     *          description="Данные пользователя",
+     *          @OA\JsonContent(
+     *              schema="CurrentUser",
+     *              type="object",
+     *              @OA\Property(property="username", type="string"),
+     *              @OA\Property(
+     *                  property="roles",
+     *                  type="array",
+     *                  @OA\Items(type="string")
+     *              ),
+     *              @OA\Property(property="balance", type="float")
+     *          )
+     *     )
+     * )
+     * @Security(name="Bearer")
+     * @throws JWTDecodeFailureException
      */
     public function getCurrentUser(
         Request                  $request,
@@ -93,5 +137,31 @@ class ApiController extends AbstractController
         $array['balance'] = $user->getBalance();
 
         return new JsonResponse($array, 200);
+    }
+
+    /**
+     * @Route("/api/v1/auth", name="api_v1_auth", methods={"POST"})
+     * @OA\Post(
+     *     description="Получить JWT токен",
+     *     tags={"auth"},
+     *     @OA\RequestBody(
+     *          @Model(type=UserDto::class)
+     *     ),
+     *     @OA\Response(
+     *          response=200,
+     *          description="JWT токен",
+     *          @OA\JsonContent(
+     *              type="object",
+     *              @OA\Property(property="token", type="string")
+     *          )
+     *     )
+     * )
+     * Managed by lexik/jwt-authentication-bundle. Used for only OA doc
+     * @throws Exception
+     */
+
+    public function login(): JsonResponse
+    {
+        throw new RuntimeException();
     }
 }
