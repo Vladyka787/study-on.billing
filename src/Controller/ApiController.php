@@ -4,7 +4,6 @@ namespace App\Controller;
 
 use App\DTO\UserDto;
 use App\Repository\UserRepository;
-use Exception;
 use JMS\Serializer\SerializerBuilder;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
 use Nelmio\ApiDocBundle\Annotation\Security;
@@ -50,7 +49,8 @@ class ApiController extends AbstractController
         ValidatorInterface       $validator,
         JWTTokenManagerInterface $JWTManager,
         UserRepository           $userRepository
-    ): JsonResponse {
+    ): JsonResponse
+    {
         $email = json_decode($request->getContent());
         $email = $email->username;
 
@@ -96,14 +96,13 @@ class ApiController extends AbstractController
     }
 
     /**
-     * @Route("/api/v1/users/current", name="api_v1_users_current", methods={"GET"})
-     * @throws JWTDecodeFailureException
+     * @Route("/api/v1/users/current", name="api_v1_users_current", methods={"GET"}),
      *
      * @OA\Get(
      *     description="Получить пользователя по JWT токену",
      *     tags={"user"},
      *     )
-     *     @OA\Response(
+     * @OA\Response(
      *          response=200,
      *          description="Данные пользователя",
      *          @OA\JsonContent(
@@ -118,7 +117,7 @@ class ApiController extends AbstractController
      *              @OA\Property(property="balance", type="float")
      *          )
      *     )
-     * )
+     * ),
      * @Security(name="Bearer")
      * @throws JWTDecodeFailureException
      */
@@ -127,7 +126,8 @@ class ApiController extends AbstractController
         JWTTokenManagerInterface $JWTManager,
         TokenStorageInterface    $storage,
         UserRepository           $userRepository
-    ): JsonResponse {
+    ): JsonResponse
+    {
         $jwt = (array)$JWTManager->decode($storage->getToken());
         $array = [];
         $array['username'] = $jwt['username'];
@@ -156,10 +156,7 @@ class ApiController extends AbstractController
      *          )
      *     )
      * )
-     * Managed by lexik/jwt-authentication-bundle. Used for only OA doc
-     * @throws Exception
      */
-
     public function login(): JsonResponse
     {
         throw new RuntimeException();
