@@ -23,6 +23,9 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 use Symfony\Component\Form\Exception\RuntimeException;
 use Nelmio\ApiDocBundle\Annotation\Model;
 use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
+use Gesdinet\JWTRefreshTokenBundle\Generator\RefreshTokenGeneratorInterface;
+
+const MONTH = 2592000;
 
 class ApiController extends AbstractController
 {
@@ -37,21 +40,23 @@ class ApiController extends AbstractController
      *     ),
      *     @OA\Response(
      *          response=201,
-     *          description="JWT токен",
+     *          description="JWT токены",
      *          @OA\JsonContent(
      *              type="object",
      *              @OA\Property(property="token", type="string"),
+     *              @OA\Property(property="refresh_token", type="string"),
      *          )
      *     )
      * )
      */
     public function register(
-        Request                  $request,
-        ValidatorInterface       $validator,
-        JWTTokenManagerInterface $JWTManager,
-        UserRepository           $userRepository
-    ): JsonResponse
-    {
+        Request                        $request,
+        ValidatorInterface             $validator,
+        JWTTokenManagerInterface       $JWTManager,
+        UserRepository                 $userRepository,
+        RefreshTokenManagerInterface   $refreshTokenManager,
+        RefreshTokenGeneratorInterface $refreshTokenGenerator
+    ): JsonResponse {
         $email = json_decode($request->getContent());
         $email = $email->username;
 
@@ -91,9 +96,21 @@ class ApiController extends AbstractController
         $hash = $hashPassword->hashPassword($user, 'Password');
         $user->setPassword($hash);
 
+        $refreshToken = $refreshTokenGenerator->createForUserWithTtl($user, MONTH);
+        $refreshToken->setUsername($user->getEmail());
+        $refreshToken->setRefreshToken();
+        $refreshToken->setValid((new \DateTime())->modify('+1 month'));
+        $refreshTokenManager->save($refreshToken);
+
         $userRepository->add($user, true);
 
-        return new JsonResponse(['token' => $JWTManager->create($user)], 201);
+        return new JsonResponse(
+            [
+            'token' => $JWTManager->create($user),
+            'refresh_token' => $refreshToken->getRefreshToken()
+            ],
+            201
+        );
     }
 
     /**
@@ -127,8 +144,7 @@ class ApiController extends AbstractController
         JWTTokenManagerInterface $JWTManager,
         TokenStorageInterface    $storage,
         UserRepository           $userRepository
-    ): JsonResponse
-    {
+    ): JsonResponse {
         $jwt = (array)$JWTManager->decode($storage->getToken());
         $array = [];
         $array['username'] = $jwt['username'];
@@ -150,10 +166,11 @@ class ApiController extends AbstractController
      *     ),
      *     @OA\Response(
      *          response=200,
-     *          description="JWT токен",
+     *          description="JWT токены",
      *          @OA\JsonContent(
      *              type="object",
-     *              @OA\Property(property="token", type="string")
+     *              @OA\Property(property="token", type="string"),
+     *              @OA\Property(property="refresh_token", type="string")
      *          )
      *     )
      * )
@@ -165,6 +182,26 @@ class ApiController extends AbstractController
 
     /**
      * @Route("/api/v1/token/refresh", name="api_v1_refresh_token", methods={"POST"})
+     *
+     * @OA\Post(
+     *     description="Обновить token и refresh_token",
+     *     tags={"refresh"},
+     *     @OA\RequestBody(
+     *          @OA\JsonContent(
+     *              type="object",
+     *              @OA\Property(property="refresh_token", type="string"),
+     *          )
+     *     ),
+     *     @OA\Response(
+     *          response=200,
+     *          description="JWT токены",
+     *          @OA\JsonContent(
+     *              type="object",
+     *              @OA\Property(property="token", type="string"),
+     *              @OA\Property(property="refresh_token", type="string"),
+     *          )
+     *     )
+     * )
      */
     public function refresh(): JsonResponse
     {
