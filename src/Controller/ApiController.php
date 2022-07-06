@@ -22,6 +22,7 @@ use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTEncodeFailureException;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Form\Exception\RuntimeException;
 use Nelmio\ApiDocBundle\Annotation\Model;
+use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 
 class ApiController extends AbstractController
 {
@@ -158,6 +159,14 @@ class ApiController extends AbstractController
      * )
      */
     public function login(): JsonResponse
+    {
+        throw new RuntimeException();
+    }
+
+    /**
+     * @Route("/api/v1/token/refresh", name="api_v1_refresh_token", methods={"POST"})
+     */
+    public function refresh(): JsonResponse
     {
         throw new RuntimeException();
     }
