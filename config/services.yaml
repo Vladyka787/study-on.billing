@@ -4,27 +4,36 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+  #Первоначальная сумма пополнения (вызывается в фикстурах и при регистрации нового пользователя)
+  app.initial_replenishment_amount: 5000
+
 
 services:
-    # default configuration for services in *this* file
-    _defaults:
-        autowire: true      # Automatically injects dependencies in your services.
-        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
 
-    # makes classes in src/ available to be used as services
-    # this creates a service per class whose id is the fully-qualified class name
-    App\:
-        resource: '../src/'
-        exclude:
-            - '../src/DependencyInjection/'
-            - '../src/Entity/'
-            - '../src/Kernel.php'
+  # default configuration for services in *this* file
+  _defaults:
+    autowire: true      # Automatically injects dependencies in your services.
+    autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+  # makes classes in src/ available to be used as services
+  # this creates a service per class whose id is the fully-qualified class name
 
-    # add more service definitions when explicit configuration is needed
-    # please note that last definitions always *replace* previous ones
 
-    Gesdinet\JWTRefreshTokenBundle\Service\RefreshToken:
-        alias: "gesdinet.jwtrefreshtoken"
+  App\:
+    resource: '../src/'
+    exclude:
+      - '../src/DependencyInjection/'
+      - '../src/Entity/'
+      - '../src/Kernel.php'
 
-    Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface:
-        alias: "gesdinet.jwtrefreshtoken.refresh_token_manager"
+  # add more service definitions when explicit configuration is needed
+  # please note that last definitions always *replace* previous ones
+
+  App\Service\PaymentService:
+    arguments:
+      $replenishmentAmount: '%app.initial_replenishment_amount%'
+
+  Gesdinet\JWTRefreshTokenBundle\Service\RefreshToken:
+    alias: "gesdinet.jwtrefreshtoken"
+
+  Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface:
+    alias: "gesdinet.jwtrefreshtoken.refresh_token_manager"
