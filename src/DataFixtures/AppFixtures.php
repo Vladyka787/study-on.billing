@@ -54,29 +54,35 @@ class AppFixtures extends Fixture
 
         $this->paymentService->topUpYourAccount($userOne, null, true);
         $this->paymentService->topUpYourAccount($userTwo, null, true);
-        $this->paymentService->topUpYourAccount($userTest, 100000);
+        $this->paymentService->topUpYourAccount($userTest, 10000000000000);
 
 
         $courseDataCharacterCode = ["kursy_po_strizhke",
             "kursy_po_begu",
             "kursy_po_plavaniyu",
-            "kursy_po_pryzhkam"];
+            "kursy_po_pryzhkam",
+            "infinity_money"];
 
         $courseDataType = ["rent",
             "rent",
             "buy",
-            "free"];
+            "free",
+            "rent"];
 
         $courseDataPrice = [499.99,
             199.50,
-            750.66];
+            750.66,
+            0,
+            99999999];
 
-        for ($i = 0; $i <= 3; $i++) {
+        for ($i = 0; $i <= 4; $i++) {
             $course = new Course();
             $course->setCharacterCode($courseDataCharacterCode[$i]);
             $course->setType($courseDataType[$i]);
-            if (array_key_exists($i, $courseDataPrice)) {
-                $course->setPrice($courseDataPrice[$i]);
+            if ($courseDataType[$i] != "free") {
+                if (array_key_exists($i, $courseDataPrice)) {
+                    $course->setPrice($courseDataPrice[$i]);
+                }
             }
             $manager->persist($course);
         }

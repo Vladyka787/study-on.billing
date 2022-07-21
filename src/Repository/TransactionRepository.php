@@ -96,7 +96,7 @@ class TransactionRepository extends ServiceEntityRepository
                 }
             }
             if (array_key_exists('skip_expired', $filter)) {
-                if ($filter['skip_expired'] === "true") {
+                if ($filter['skip_expired'] == "true") {
                     if ($transaction->getValidUntil() !== null) {
                         $now = strtotime('now');
                         $then = strtotime($transaction->getValidUntil()->format('Y-m-d H:i:sP'));
