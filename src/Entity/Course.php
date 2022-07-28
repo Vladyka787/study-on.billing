@@ -43,6 +43,11 @@ class Course
      */
     private $transactions;
 
+    /**
+     * @ORM\Column(type="string", length=255)
+     */
+    private $Title;
+
     public function __construct()
     {
         $this->transactions = new ArrayCollection();
@@ -141,6 +146,18 @@ class Course
                 $transaction->setCourse(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getTitle(): ?string
+    {
+        return $this->Title;
+    }
+
+    public function setTitle(string $Title): self
+    {
+        $this->Title = $Title;
 
         return $this;
     }

@@ -6,6 +6,7 @@ use App\DTO\UserDto;
 use App\Entity\Course;
 use App\Entity\Transaction;
 use App\Entity\User;
+use App\Repository\CourseRepository;
 use App\Repository\TransactionRepository;
 use App\Repository\UserRepository;
 use App\Service\PaymentService;
@@ -14,6 +15,7 @@ use JMS\Serializer\SerializerBuilder;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
 use Nelmio\ApiDocBundle\Annotation\Security;
 use OpenApi\Annotations as OA;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -70,9 +72,9 @@ class ApiController extends AbstractController
         RefreshTokenManagerInterface   $refreshTokenManager,
         RefreshTokenGeneratorInterface $refreshTokenGenerator,
         PaymentService                 $paymentService
-    ): JsonResponse
-    {
+    ): JsonResponse {
         $email = json_decode($request->getContent());
+        $password = $email->password;
         $email = $email->username;
 
         $serializer = SerializerBuilder::create()->build();
@@ -108,7 +110,7 @@ class ApiController extends AbstractController
             PasswordAuthenticatedUserInterface::class => ['algorithm' => 'auto'],
         ]);
         $hashPassword = new UserPasswordHasher($passwordHasherFactory);
-        $hash = $hashPassword->hashPassword($user, 'Password');
+        $hash = $hashPassword->hashPassword($user, $password);
         $user->setPassword($hash);
 
         $refreshToken = $refreshTokenGenerator->createForUserWithTtl($user, MONTH);
@@ -161,8 +163,7 @@ class ApiController extends AbstractController
         JWTTokenManagerInterface $JWTManager,
         TokenStorageInterface    $storage,
         UserRepository           $userRepository
-    ): JsonResponse
-    {
+    ): JsonResponse {
         $jwt = (array)$JWTManager->decode($storage->getToken());
         $array = [];
         $array['username'] = $jwt['username'];
@@ -277,8 +278,7 @@ class ApiController extends AbstractController
      */
     public function getCourse(
         Request $request
-    ): JsonResponse
-    {
+    ): JsonResponse {
         $code = $request->get('code');
 
         $courseRepository = $this->doctrine->getRepository(Course::class);
@@ -333,8 +333,7 @@ class ApiController extends AbstractController
         TransactionRepository    $transactionRepository,
         JWTTokenManagerInterface $JWTManager,
         TokenStorageInterface    $storage
-    ): JsonResponse
-    {
+    ): JsonResponse {
         $code = $request->get('code');
         $jwt = (array)$JWTManager->decode($storage->getToken());
 
@@ -434,8 +433,7 @@ class ApiController extends AbstractController
         TransactionRepository    $transactionRepository,
         JWTTokenManagerInterface $JWTManager,
         TokenStorageInterface    $storage
-    ): JsonResponse
-    {
+    ): JsonResponse {
         $filter = $request->get('filter');
         $jwt = (array)$JWTManager->decode($storage->getToken());
 
@@ -448,5 +446,159 @@ class ApiController extends AbstractController
 //        $json['test']=$filter;
 
         return new JsonResponse($json, 200);
+    }
+
+    /**
+     * @Route("/api/v1/courses", name="api_v1_courses_add", methods={"POST"})
+     * @IsGranted("ROLE_SUPER_ADMIN")
+     * @OA\Post(
+     *     description="Создать курс",
+     *     tags={"course"},
+     *     @OA\RequestBody(
+     *          @OA\JsonContent(
+     *              type="object",
+     *              @OA\Property(property="type", type="string"),
+     *              @OA\Property(property="title", type="string"),
+     *              @OA\Property(property="code", type="string"),
+     *              @OA\Property(property="price", type="float"),
+     *          )
+     *     ),
+     *     @OA\Response(
+     *          response=201,
+     *          description="Данные об успешном создании курса",
+     *          @OA\JsonContent(
+     *              schema="SuccessCreate",
+     *              type="object",
+     *              @OA\Property(property="success", type="bool"),
+     *          )
+     *     ),
+     *     @OA\Response(
+     *          response=406,
+     *          description="Данные об ошибке при смене данных",
+     *          @OA\JsonContent(
+     *              schema="FailCreate",
+     *              type="object",
+     *              @OA\Property(property="code", type="int", example="406"),
+     *              @OA\Property(property="message", type="string", example="Код курса должен быть уникальным."),
+     *          )
+     *     )
+     * ),
+     * ),
+     * @Security(name="Bearer")
+     */
+    public function createCourse(
+        Request          $request,
+        CourseRepository $courseRepository
+    ): JsonResponse {
+        $data = json_decode($request->getContent());
+        $type = $data->type;
+        $title = $data->title;
+        $code = $data->code;
+        $price = $data->price;
+
+        $result = $courseRepository->findBy(['CharacterCode' => $code]);
+
+        if ($result == []) {
+            $course = new Course();
+            $course->setTitle($title);
+            $course->setType($type);
+            $course->setCharacterCode($code);
+            $course->setPrice($price);
+
+            $courseRepository->add($course, true);
+
+            return new JsonResponse(['success' => true], 201);
+        }
+
+
+        return new JsonResponse(
+            [
+                'code' => 406,
+                'message' => 'Код курса должен быть уникальным.'
+            ],
+            406
+        );
+    }
+
+    /**
+     * @Route("/api/v1/courses/{code}", name="api_v1_courses_code_edit", methods={"POST"})
+     * @IsGranted("ROLE_SUPER_ADMIN")
+     * @OA\Post(
+     *     description="Редактировать курс",
+     *     tags={"course"},
+     *     @OA\Parameter(
+     *         name="code",
+     *         in="path",
+     *         description="course character code",
+     *         required=true,
+     *     ),
+     *     @OA\RequestBody(
+     *          @OA\JsonContent(
+     *              type="object",
+     *              @OA\Property(property="type", type="string"),
+     *              @OA\Property(property="title", type="string"),
+     *              @OA\Property(property="code", type="string"),
+     *              @OA\Property(property="price", type="float"),
+     *          )
+     *     ),
+     *     @OA\Response(
+     *          response=200,
+     *          description="Данные об успешном редактировании курса",
+     *          @OA\JsonContent(
+     *              schema="SuccessEdit",
+     *              type="object",
+     *              @OA\Property(property="success", type="bool"),
+     *          )
+     *     ),
+     *     @OA\Response(
+     *          response=406,
+     *          description="Данные об ошибке при смене данных",
+     *          @OA\JsonContent(
+     *              schema="FailEdit",
+     *              type="object",
+     *              @OA\Property(property="code", type="int", example="406"),
+     *              @OA\Property(property="message", type="string", example="Не существует курса с таким кодом."),
+     *          )
+     *     )
+     * ),
+     * ),
+     * @Security(name="Bearer")
+     */
+    public function editCourse(
+        Request          $request,
+        CourseRepository $courseRepository
+    ): JsonResponse {
+        $data = json_decode($request->getContent());
+        $type = $data->type;
+        $title = $data->title;
+        $code = $data->code;
+        $price = $data->price;
+
+        $oldCode = $request->get('code');
+
+        $course = $courseRepository->findBy(['CharacterCode' => $oldCode]);
+
+        if (array_key_exists(0, $course)) {
+            $course = $course[0];
+        }
+
+        if ($course == []) {
+            return new JsonResponse(
+                [
+                    'code' => 406,
+                    'message' => 'Не существует курса с таким кодом.'
+                ],
+                406
+            );
+        }
+
+        $course->setTitle($title);
+        $course->setType($type);
+        $course->setCharacterCode($code);
+        $course->setPrice($price);
+
+        $courseRepository->add($course, true);
+
+        return new JsonResponse(['success' => true], 200);
     }
 }
